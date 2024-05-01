@@ -13,7 +13,7 @@ using UnityEngine;
 namespace Oxide.Plugins
 {
     [Info("Healthy Guns", "VisEntities", "4.0.0")]
-    [Description("Restores full condition to weapons spawned in roadside and monument loot containers.")]
+    [Description("Restores full condition to weapons spawned in loot crates and barrels.")]
     public class HealthyGuns : RustPlugin
     {
         #region Fields
