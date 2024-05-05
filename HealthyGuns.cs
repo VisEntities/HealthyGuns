@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Healthy Guns", "VisEntities", "4.0.0")]
+    [Info("Healthy Guns", "VisEntities", "4.1.0")]
     [Description("Restores full condition to weapons spawned in loot crates and barrels.")]
     public class HealthyGuns : RustPlugin
     {
@@ -26,6 +26,7 @@ namespace Oxide.Plugins
 
         private void Init()
         {
+            Unsubscribe(nameof(OnLootSpawn));
             _plugin = this;
         }
 
@@ -37,13 +38,19 @@ namespace Oxide.Plugins
 
         private void OnServerInitialized(bool isStartup)
         {
-            CoroutineUtil.StartCoroutine(Guid.NewGuid().ToString(), RepairAllContainersCoroutine());
+            Subscribe(nameof(OnLootSpawn));
+
+            if (!isStartup)
+                CoroutineUtil.StartCoroutine(Guid.NewGuid().ToString(), RepairAllContainersCoroutine());
         }
 
         private void OnLootSpawn(LootContainer container)
         {
             if (container != null
+                && container.inventory != null
                 && container.OwnerID == 0
+                && container.inventory.itemList != null
+                && container.inventory.itemList.Count > 0
                 && (container.SpawnType == LootContainer.spawnType.ROADSIDE || container.SpawnType == LootContainer.spawnType.TOWN))
             {
                 NextTick(() =>
@@ -61,25 +68,16 @@ namespace Oxide.Plugins
         {
             foreach (LootContainer container in BaseNetworkable.serverEntities.OfType<LootContainer>())
             {
-                if (container != null
-                    && container.OwnerID == 0
-                    && (container.SpawnType == LootContainer.spawnType.ROADSIDE || container.SpawnType == LootContainer.spawnType.TOWN))
-                {
-                    RepairContainerContents(container);
-                }
-
+                OnLootSpawn(container);
                 yield return CoroutineEx.waitForSeconds(0.1f);
             }
         }
 
         private void RepairContainerContents(LootContainer container)
         {
-            if (container.inventory.itemList.Count <= 0)
-                return;
-
             foreach (Item item in container.inventory.itemList)
             {
-                if (item.hasCondition && item.condition != item.info.condition.max && ItemOfCategory(item, ItemCategory.Weapon))
+                if (item != null && item.hasCondition && item.condition != item.info.condition.max && ItemOfCategory(item, ItemCategory.Weapon))
                     item.condition = item.info.condition.max;
             }
         }
